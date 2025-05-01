@@ -1,0 +1,109 @@
+import 'package:blue_thermal_printer/blue_thermal_printer.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:typed_data';
+
+import '../core/error_utils.dart';
+
+class BluetoothPrinterService {
+  final BlueThermalPrinter printer = BlueThermalPrinter.instance;
+  static const _lastDeviceKey = 'last_connected_printer';
+
+  /// 프린터 연결 함수 (MAC 주소가 있으면 해당 기기로 시도)
+  Future<BluetoothDevice?> connectToPrinter([String? macAddress]) async {
+    try {
+      bool alreadyConnected = await printer.isConnected ?? false;
+      if (alreadyConnected) {
+        Fluttertoast.showToast(
+          msg: "이미 프린터에 연결되어 있습니다.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
+
+        List<BluetoothDevice> devices = await printer.getBondedDevices();
+        BluetoothDevice? connectedDevice = devices.firstWhere(
+              (d) => d.name?.contains("PT") ?? false,
+          orElse: () => devices.first,
+        );
+        return connectedDevice;
+      }
+
+      List<BluetoothDevice> devices = await printer.getBondedDevices();
+      if (devices.isEmpty) return null;
+
+      BluetoothDevice selected = macAddress != null
+          ? devices.firstWhere(
+            (d) => d.address == macAddress,
+        orElse: () => devices.first,
+      )
+          : devices.firstWhere(
+            (d) => d.name?.contains("PT") ?? false,
+        orElse: () => devices.first,
+      );
+
+      await printer.connect(selected);
+      await saveLastConnectedPrinter(selected.address ?? "");
+
+      Fluttertoast.showToast(
+        msg: "블루투스 프린터 연결됨: ${selected.name}",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+
+      return selected;
+    } catch (e) {
+      showUserFriendlyError(e);
+      return null;
+    }
+  }
+
+  /// 텍스트 출력
+  Future<void> printText(String text) async {
+    try {
+      await printer.printNewLine();
+      await printer.printCustom(text, 0, 0);
+      await printer.printNewLine();
+      await printer.paperCut();
+
+      Fluttertoast.showToast(
+        msg: "프린트 완료",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+    } catch (e) {
+      showUserFriendlyError(e);
+    }
+  }
+
+  /// 이미지 출력
+  Future<void> printImage(Uint8List imageBytes) async {
+    try {
+      await printer.printImageBytes(imageBytes);
+      await printer.printNewLine();
+    } catch (e) {
+      showUserFriendlyError(e);
+    }
+  }
+
+  /// 연결 해제
+  Future<void> disconnect() async {
+    await printer.disconnect();
+  }
+
+  /// 연결 상태 확인
+  Future<bool> isConnected() async {
+    return await printer.isConnected ?? false;
+  }
+
+  /// 마지막 연결된 프린터 MAC 주소 저장
+  Future<void> saveLastConnectedPrinter(String macAddress) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastDeviceKey, macAddress);
+  }
+
+  /// 마지막으로 저장된 프린터 MAC 주소 가져오기
+  Future<String?> getLastConnectedPrinter() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_lastDeviceKey);
+  }
+}
