@@ -2,6 +2,7 @@ import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
+import 'package:flutter/material.dart';
 
 import '../core/error_utils.dart';
 
@@ -51,10 +52,60 @@ class BluetoothPrinterService {
       );
 
       return selected;
-    } catch (e) {
-      showUserFriendlyError(e);
+    } catch (e, stacktrace) {
+      handleBluetoothError(e, stacktrace);
       return null;
     }
+  }
+
+  /// ✅ 페어링된 기기 목록에서 선택 연결
+  Future<BluetoothDevice?> connectToPrinterWithSelection(BuildContext context) async {
+    try {
+      List<BluetoothDevice> devices = await printer.getBondedDevices();
+      if (devices.isEmpty) {
+        Fluttertoast.showToast(msg: "페어링된 블루투스 프린터가 없습니다.");
+        return null;
+      }
+
+      BluetoothDevice? selectedDevice = await showDevicePicker(context, devices);
+      if (selectedDevice == null) return null;
+
+      bool alreadyConnected = await printer.isConnected ?? false;
+      if (!alreadyConnected) {
+        await printer.connect(selectedDevice);
+      }
+
+      Fluttertoast.showToast(
+        msg: "연결됨: ${selectedDevice.name}",
+        toastLength: Toast.LENGTH_SHORT,
+      );
+
+      await saveLastConnectedPrinter(selectedDevice.address ?? "");
+      return selectedDevice;
+    } catch (e, stacktrace) {
+      handleBluetoothError(e, stacktrace);
+      return null;
+    }
+  }
+
+  /// 기기 선택 다이얼로그
+  Future<BluetoothDevice?> showDevicePicker(BuildContext context, List<BluetoothDevice> devices) async {
+    return await showDialog<BluetoothDevice>(
+      context: context,
+      builder: (BuildContext context) {
+        return SimpleDialog(
+          title: const Text('프린터 선택'),
+          children: devices.map((device) {
+            return SimpleDialogOption(
+              child: Text('${device.name ?? "이름 없음"} (${device.address})'),
+              onPressed: () {
+                Navigator.pop(context, device);
+              },
+            );
+          }).toList(),
+        );
+      },
+    );
   }
 
   /// 텍스트 출력
@@ -70,8 +121,8 @@ class BluetoothPrinterService {
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
       );
-    } catch (e) {
-      showUserFriendlyError(e);
+    } catch (e, stacktrace) {
+      handleBluetoothError(e, stacktrace);
     }
   }
 
@@ -80,8 +131,8 @@ class BluetoothPrinterService {
     try {
       await printer.printImageBytes(imageBytes);
       await printer.printNewLine();
-    } catch (e) {
-      showUserFriendlyError(e);
+    } catch (e, stacktrace) {
+      handleBluetoothError(e, stacktrace);
     }
   }
 

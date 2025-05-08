@@ -223,8 +223,7 @@ class _HomePageState extends State<HomePage> {
                   )
                       : ElevatedButton(
                     onPressed: () async {
-                      final device = await printerService.connectToPrinter();
-                      if (!context.mounted) return;
+                      final device = await printerService.connectToPrinterWithSelection(context);                      if (!context.mounted) return;
 
                       if (device != null) {
                         updatePrinterStatus(connected: true, name: device.name);

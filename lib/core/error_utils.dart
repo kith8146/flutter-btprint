@@ -24,8 +24,16 @@ void showUserFriendlyError(dynamic error) {
   Fluttertoast.showToast(
     msg: userMessage,
     toastLength: Toast.LENGTH_LONG,
-    //timeInSecForIosWeb: 5,
     backgroundColor: Colors.redAccent,
     textColor: Colors.white,
   );
+}
+
+/// ✅ Bluetooth 에러 핸들링 (stacktrace 추가 출력)
+void handleBluetoothError(dynamic e, StackTrace stacktrace) {
+  debugPrint("🟥 Bluetooth 연결 에러: $e");
+  debugPrint("🟥 스택트레이스: $stacktrace");
+
+  // 사용자 친화적인 에러 메시지 재사용
+  showUserFriendlyError(e);
 }
