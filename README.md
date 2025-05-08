@@ -13,6 +13,10 @@
 - 출력 미리보기 및 인쇄
 - 한글 및 특수문자 깨짐 방지 (출력 시 텍스트 → 이미지 변환)
 - 사용자가 선택한 옵션에 따라 출력 포맷 자동 생성
+- **출력 기록 저장 및 관리**
+- **출력 기록 스와이프 삭제**
+- **출력 기록 상세보기 및 재인쇄**
+- **채널 미선택 시 안내 메시지 출력**
 
 ## 🔧 개발 환경
 
@@ -25,28 +29,40 @@
 
 lib/
 ├── main.dart
-├── MainUiLogic.dart
-├── channel_section.dart
-├── time_input_section.dart
-├── vehicle_number_section.dart
-├── print_utils.dart
-├── print_controller.dart
-├── bluetooth_printer_service.dart
-└── record_generator.dart
+├── core/
+│ ├── bluetooth_printer_service.dart
+│ ├── database_helper.dart
+│ ├── error_utils.dart
+│ ├── print_controller.dart
+│ ├── print_utils.dart
+│ ├── record_generator.dart
+│ ├── record_store.dart
+├── models/
+│ └── print_record.dart
+├── screens/
+│ ├── MainUiLogic.dart
+│ ├── print_history_page.dart
+├── widgets/
+│ ├── channel_section.dart
+│ ├── time_input_section.dart
+│ └── vehicle_number_section.dart
 
 
-## 💾 로컬 저장 기능
+## 💾 데이터 저장
 
-- 차량번호 및 최근 설정값 SharedPreferences로 저장
+- **출력 기록**: SQLite (sqflite)
+- **차량번호 및 설정값**: SharedPreferences
 
 ## 🔌 블루투스 기능
 
-- Flutter Blue Plus 패키지 사용
+- **패키지**: blue_thermal_printer
 - 최근 연결된 프린터 자동 재연결
 - 연결 해제 및 상태 토글 버튼 제공
 
 ## 📝 향후 추가 예정
 
-- 출력 기록 관리 기능
-
-
+- 출력 기록 검색/필터 기능
+- 기록 내보내기 (CSV/JSON)
+- 설정 화면 추가 (테마, 기본값 관리 등)
+- 반복출력(스케줄러) 기능
+- 더미 데이터 추가 기능 (테스트용)
