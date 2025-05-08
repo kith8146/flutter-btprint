@@ -79,10 +79,10 @@ void exampleGenerateAndPrintText({
                 await printer.printImage(imageBytes); // ✅ 인쇄 시도
 
                 // ✅ 인쇄 성공 후에만 기록 저장
-                await addPrintRecord(PrintRecord(
-                  timestamp: DateTime.now(),
-                  contentText: text,
-                ));
+                await addPrintRecord(
+                    DateTime.now(),
+                    text,
+                );
 
                 Navigator.pop(navigatorKey.currentContext!); // 닫기
               } catch (e) {

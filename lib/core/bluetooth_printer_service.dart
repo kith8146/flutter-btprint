@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../core/error_utils.dart';
 
+
 class BluetoothPrinterService {
   final BlueThermalPrinter printer = BlueThermalPrinter.instance;
   static const _lastDeviceKey = 'last_connected_printer';

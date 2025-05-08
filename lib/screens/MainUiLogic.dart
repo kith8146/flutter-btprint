@@ -446,6 +446,16 @@ class _HomePageState extends State<HomePage> {
 
   Widget buildPrintButton() => ElevatedButton(
     onPressed: () {
+    // 1) A/B 채널 선택 여부 검사
+    if (selectedAState.isEmpty || selectedBState.isEmpty) {
+    Fluttertoast.showToast(
+    msg: "A채널과 B채널을 모두 선택해주세요.",
+    toastLength: Toast.LENGTH_SHORT,
+    gravity: ToastGravity.BOTTOM,
+    );
+    return; // 더 이상 진행하지 않음
+    }
+    // 2) 선택이 모두 되어 있으면 기존 로직 실행
       exampleGenerateAndPrintText(
         vehicleNumber: carNumberController.text,
         intervalText: selectedInterval,

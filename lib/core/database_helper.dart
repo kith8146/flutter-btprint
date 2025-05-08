@@ -1,3 +1,4 @@
+// lib/core/database_helper.dart
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -11,7 +12,6 @@ class DatabaseHelper {
   DatabaseHelper._internal();
 
   static Database? _database;
-
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDb();
@@ -19,13 +19,12 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDb() async {
-    final documentsDirectory = await getApplicationDocumentsDirectory();
-    final path = join(documentsDirectory.path, "print_records.db");
-
+    final dir = await getApplicationDocumentsDirectory();
+    final path = join(dir.path, "print_records.db");
     return await openDatabase(
       path,
       version: 1,
-      onCreate: (Database db, int version) async {
+      onCreate: (db, v) async {
         await db.execute('''
           CREATE TABLE records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,9 +36,10 @@ class DatabaseHelper {
     );
   }
 
-  Future<void> insertRecord(PrintRecord record) async {
+  /// 삽입 후 생성된 id를 반환하도록!
+  Future<int> insertRecord(PrintRecord record) async {
     final db = await database;
-    await db.insert(
+    return await db.insert(
       'records',
       {
         'timestamp': record.timestamp.toIso8601String(),
@@ -51,14 +51,17 @@ class DatabaseHelper {
 
   Future<List<PrintRecord>> getAllRecords() async {
     final db = await database;
-    final maps = await db.query('records', orderBy: 'id DESC');
+    final rows = await db.query('records', orderBy: 'id DESC');
+    return rows.map((r) => PrintRecord(
+      id: r['id'] as int,
+      timestamp: DateTime.parse(r['timestamp'] as String),
+      contentText: r['contentText'] as String,
+    )).toList();
+  }
 
-    return maps.map((map) {
-      return PrintRecord(
-        timestamp: DateTime.parse(map['timestamp'] as String),
-        contentText: map['contentText'] as String,
-      );
-    }).toList();
+  Future<void> deleteById(int id) async {
+    final db = await database;
+    await db.delete('records', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> deleteAllRecords() async {
