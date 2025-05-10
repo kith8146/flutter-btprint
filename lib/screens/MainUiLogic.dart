@@ -167,7 +167,7 @@ class _HomePageState extends State<HomePage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => PrintHistoryPage(records: printRecords),
+                    builder: (context) => const PrintHistoryPage(),
                   ),
                 );
               },

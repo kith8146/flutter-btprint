@@ -22,6 +22,10 @@ Future<void> addPrintRecord(DateTime timestamp, String contentText) async {
   // 2) 실제 사용할 객체 생성 후 리스트 맨 앞에 삽입
   final rec = PrintRecord(id: id, timestamp: timestamp, contentText: contentText);
   printRecords.insert(0, rec);
+// 디버깅용 출력
+
+  print("📄 현재 저장된 기록 수: ${printRecords.length}");
+
 }
 
 /// id로 개별 삭제
