@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import '../core/error_utils.dart'; // ✅ 예외 처리 유틸 추가
 
 class VehicleNumberSection extends StatefulWidget {
   final TextEditingController controller;
@@ -21,14 +22,20 @@ class _VehicleNumberSectionState extends State<VehicleNumberSection> {
   void toggleEdit() {
     setState(() {
       if (isEditing) {
-        widget.onVehicleNumberChanged(widget.controller.text);
+        try {
+          final value = widget.controller.text.trim();
 
-        // ✅ 토스트 메시지 띄우기
-        Fluttertoast.showToast(
-          msg: "차량번호가 저장되었습니다.",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-        );
+          widget.onVehicleNumberChanged(value);
+
+          Fluttertoast.showToast(
+            msg: "차량번호가 저장되었습니다.",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+          );
+        } catch (e, stack) {
+          showUserFriendlyError(e);
+          logError('VehicleNumberSection.toggleEdit', e, stack);
+        }
       }
       isEditing = !isEditing;
     });
@@ -69,6 +76,6 @@ class _VehicleNumberSectionState extends State<VehicleNumberSection> {
 
   @override
   void dispose() {
-    super.dispose(); // ✅ 외부에서 받은 controller는 dispose하지 않음
+    super.dispose(); // ✅ 외부 controller이므로 dispose 안 함
   }
 }

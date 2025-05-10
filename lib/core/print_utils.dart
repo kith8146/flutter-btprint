@@ -5,8 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-
-
+import 'error_utils.dart'; // ✅ 예외 처리 유틸 추가
 
 // ✅ 채널 온도 범위 기반 랜덤 생성 함수
 String generateRandomFromInput(String t1, String t2) {
@@ -20,7 +19,6 @@ String generateRandomFromInput(String t1, String t2) {
   final value = min + rand * (max - min);  // -1.0 ~ +1.0
   return value.toStringAsFixed(1);
 }
-
 
 // ✅ 출력 텍스트 생성 함수
 String generateSamplePrintText({
@@ -49,7 +47,7 @@ String generateSamplePrintText({
       if (newDate != currentDateHeader) {
         buffer.writeln();
         buffer.writeln(newDate);
-        buffer.writeln(); //날짜 출력 후 한 줄 더 띄우기
+        buffer.writeln();
         currentDateHeader = newDate;
       }
       continue;
@@ -83,48 +81,48 @@ String generateSamplePrintText({
   return buffer.toString();
 }
 
+// ✅ 텍스트 → 이미지 변환 (예외 처리 포함)
 Future<Uint8List> textToImageBytes(String text, {double fontSize = 22.0}) async {
-  const double maxWidth = 360.0; // PT-210 출력 폭 기준
-  const double bottomPadding = 40.0;
+  try {
+    const double maxWidth = 360.0; // PT-210 출력 폭 기준
+    const double bottomPadding = 40.0;
 
-  final textStyle = TextStyle(
-    color: Colors.black,
-    fontSize: fontSize,
-    fontFamily: 'Roboto',
-    letterSpacing: 2.0,
-  );
+    final textStyle = TextStyle(
+      color: Colors.black,
+      fontSize: fontSize,
+      fontFamily: 'Roboto',
+      letterSpacing: 2.0,
+    );
 
-  final textSpan = TextSpan(
-    text: text,
-    style: textStyle,
-  );
+    final textSpan = TextSpan(text: text, style: textStyle);
 
-  final textPainter = TextPainter(
-    text: textSpan,
-    textDirection: ui.TextDirection.ltr,
-    textAlign: TextAlign.left,
-    textWidthBasis: TextWidthBasis.longestLine, // 🔹 각 줄의 최대 길이 기준
-  );
+    final textPainter = TextPainter(
+      text: textSpan,
+      textDirection: ui.TextDirection.ltr,
+      textAlign: TextAlign.left,
+      textWidthBasis: TextWidthBasis.longestLine,
+    );
 
-  textPainter.layout(maxWidth: maxWidth);
+    textPainter.layout(maxWidth: maxWidth);
 
-  final recorder = ui.PictureRecorder();
-  final canvas = Canvas(recorder);
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
 
-  // 배경 흰색
-  final paint = Paint()..color = Colors.white;
-  final width = maxWidth;
-  final height = textPainter.height + bottomPadding;
+    final paint = Paint()..color = Colors.white;
+    final width = maxWidth;
+    final height = textPainter.height + bottomPadding;
 
-  canvas.drawRect(Rect.fromLTWH(0, 0, width, height), paint);
+    canvas.drawRect(Rect.fromLTWH(0, 0, width, height), paint);
+    textPainter.paint(canvas, const Offset(0, 0));
 
-  // 텍스트 출력
-  textPainter.paint(canvas, const Offset(0, 0));
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(width.ceil(), height.ceil());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
 
-  final picture = recorder.endRecording();
-  final image = await picture.toImage(width.ceil(), height.ceil());
-  final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-
-  return byteData!.buffer.asUint8List();
+    return byteData!.buffer.asUint8List();
+  } catch (e, stack) {
+    showUserFriendlyError(e);
+    logError('PrintUtils.textToImageBytes', e, stack);
+    return Uint8List(0); // 빈 이미지 반환하여 앱 종료 방지
+  }
 }
-

@@ -1,23 +1,28 @@
 // main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import '../screens/MainUiLogic.dart'; // 실제 홈 화면 UI
+import 'screens/MainUiLogic.dart';
 import 'screens/print_history_page.dart';
 import 'models/print_record.dart';
 import 'core/record_store.dart';
-
+import 'core/error_utils.dart'; // ✅ 예외 처리 유틸 추가
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-/// ✅ 전역에서 접근 가능한 인쇄 기록 리스트
 List<PrintRecord> printRecords = [];
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // ✅ 반드시 가장 먼저
-  await loadPrintRecords();                  // ✅ DB에서 기록 먼저 불러오기
-  runApp(const MyApp());                     // ✅ 그다음 앱 실행
-}
+  WidgetsFlutterBinding.ensureInitialized();
 
+  try {
+    await loadPrintRecords();
+  } catch (e, stack) {
+    logError('main.loadPrintRecords', e, stack);
+    // 무시하고 앱 실행은 계속
+  }
+
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -27,7 +32,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       navigatorKey: navigatorKey,
       title: '프린터 앱',
-      locale: const Locale('ko', 'KR'), // 🇰🇷 로케일 설정
+      locale: const Locale('ko', 'KR'),
       supportedLocales: const [
         Locale('ko', 'KR'),
         Locale('en', 'US'),
@@ -36,7 +41,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
       ),
-      home: const HomePage(), // 메인 페이지는 MainUiLogic.dart에서 정의한 HomePage
+      home: const HomePage(),
     );
   }
 }

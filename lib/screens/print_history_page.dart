@@ -6,6 +6,8 @@ import '../models/print_record.dart';
 import '../core/print_utils.dart';
 import '../core/bluetooth_printer_service.dart';
 import '../core/record_store.dart';
+import '../core/error_utils.dart';
+
 
 class PrintHistoryPage extends StatefulWidget {
   const PrintHistoryPage({super.key});
@@ -183,10 +185,16 @@ class _PrintHistoryPageState extends State<PrintHistoryPage> {
                             trailing: IconButton(
                               icon: const Icon(Icons.print),
                               onPressed: () async {
-                                final img = await textToImageBytes(record.contentText);
-                                await BluetoothPrinterService().printImage(img);
+                                try {
+                                  final img = await textToImageBytes(record.contentText);
+                                  await BluetoothPrinterService().printImage(img);
+                                } catch (e, stack) {
+                                  handleBluetoothError(e, stack);
+                                  logError('PrintHistoryPage.trailingReprint', e, stack);
+                                }
                               },
                             ),
+
                             // 👁 미리보기 다이얼로그
                             onTap: () {
                               showDialog(
@@ -201,12 +209,19 @@ class _PrintHistoryPageState extends State<PrintHistoryPage> {
                                         onPressed: () => Navigator.pop(context),
                                         child: const Text('닫기')),
                                     ElevatedButton(
-                                        onPressed: () async {
+                                      onPressed: () async {
+                                        try {
                                           final img = await textToImageBytes(record.contentText);
                                           await BluetoothPrinterService().printImage(img);
                                           Navigator.pop(context);
-                                        },
-                                        child: const Text('재인쇄')),
+                                        } catch (e, stack) {
+                                          handleBluetoothError(e, stack);
+                                          logError('PrintHistoryPage.dialogReprint', e, stack);
+                                        }
+                                      },
+                                      child: const Text('재인쇄'),
+                                    ),
+
                                   ],
                                 ),
                               );

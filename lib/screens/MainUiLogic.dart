@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/bluetooth_printer_service.dart';
 import '../core/print_utils.dart';
 import '../core/print_controller.dart';
+import '../core/error_utils.dart';
 import '../main.dart'; // navigatorKey 사용을 위해
 
 import '../widgets/channel_section.dart';       // ✅ A/B 채널 UI
@@ -211,31 +212,44 @@ class _HomePageState extends State<HomePage> {
                       backgroundColor: Colors.red,
                     ),
                     onPressed: () async {
-                      await printerService.disconnect();
-                      updatePrinterStatus(connected: false);
-                      Fluttertoast.showToast(
-                        msg: "프린터 연결이 해제되었습니다.",
-                        toastLength: Toast.LENGTH_SHORT,
-                        gravity: ToastGravity.BOTTOM,
-                      );
+                      try {
+                        await printerService.disconnect();
+                        updatePrinterStatus(connected: false);
+                        Fluttertoast.showToast(
+                          msg: "프린터 연결이 해제되었습니다.",
+                          toastLength: Toast.LENGTH_SHORT,
+                          gravity: ToastGravity.BOTTOM,
+                        );
+                      } catch (e, stack) {
+                        handleBluetoothError(e, stack);
+                        logError('MainUiLogic.disconnect', e, stack);
+                      }
                     },
+
                     child: const Text('해제'),
                   )
                       : ElevatedButton(
                     onPressed: () async {
-                      final device = await printerService.connectToPrinterWithSelection(context);                      if (!context.mounted) return;
+                      try {
+                        final device = await printerService.connectToPrinterWithSelection(context);
+                        if (!context.mounted) return;
 
-                      if (device != null) {
-                        updatePrinterStatus(connected: true, name: device.name);
-                      } else {
-                        updatePrinterStatus(connected: false);
-                        showDialog(
-                          context: context,
-                          builder: (_) => const AlertDialog(
-                            title: Text('연결 오류'),
-                            content: Text('프린터가 연결되지 않았습니다.'),
-                          ),
-                        );
+                        if (device != null) {
+                          updatePrinterStatus(connected: true, name: device.name);
+                        } else {
+                          updatePrinterStatus(connected: false);
+                          debugPrint("❌ 프린터 연결 실패");
+                          showDialog(
+                            context: context,
+                            builder: (_) => const AlertDialog(
+                              title: Text('연결 오류'),
+                              content: Text('프린터가 연결되지 않았습니다.'),
+                            ),
+                          );
+                        }
+                      } catch (e, stack) {
+                        handleBluetoothError(e, stack);
+                        logError('MainUiLogic.connectToPrinterWithSelection', e, stack);
                       }
                     },
                     child: const Text('연결'),
@@ -446,16 +460,24 @@ class _HomePageState extends State<HomePage> {
 
   Widget buildPrintButton() => ElevatedButton(
     onPressed: () {
-    // 1) A/B 채널 선택 여부 검사
-    if (selectedAState.isEmpty || selectedBState.isEmpty) {
-    Fluttertoast.showToast(
-    msg: "A채널과 B채널을 모두 선택해주세요.",
-    toastLength: Toast.LENGTH_SHORT,
-    gravity: ToastGravity.BOTTOM,
-    );
-    return; // 더 이상 진행하지 않음
-    }
-    // 2) 선택이 모두 되어 있으면 기존 로직 실행
+      // 채널 상태 검사
+      if (selectedAState.isEmpty || selectedBState.isEmpty) {
+        Fluttertoast.showToast(
+          msg: "A채널과 B채널을 모두 선택해주세요.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
+        return;
+      }
+
+      // 날짜 시간 입력 검사
+      if (loadDateController.text.isEmpty || loadTimeController.text.isEmpty ||
+          unloadDateController.text.isEmpty || unloadTimeController.text.isEmpty) {
+        showUserFriendlyError("상차/하차 날짜와 시간이 모두 입력되어야 합니다.");
+        return;
+      }
+
+      // 정상적으로 입력된 경우에만 인쇄 실행
       exampleGenerateAndPrintText(
         vehicleNumber: carNumberController.text,
         intervalText: selectedInterval,
@@ -471,6 +493,7 @@ class _HomePageState extends State<HomePage> {
         maxB: double.tryParse(bControllers['2']!.text) ?? 8.0,
       );
     },
+
     child: const Text('인쇄'),
   );
 }

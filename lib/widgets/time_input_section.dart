@@ -2,9 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../screens/MainUiLogic.dart';
-
-
+import '../core/error_utils.dart'; // ✅ 예외 처리 유틸 추가
 
 class TimeInputSection extends StatefulWidget {
   final String title;
@@ -24,25 +22,35 @@ class TimeInputSection extends StatefulWidget {
 
 class _TimeInputSectionState extends State<TimeInputSection> {
   Future<void> _pickDate(BuildContext context, TextEditingController controller) async {
-    DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null) {
-      controller.text = "${picked.year.toString().padLeft(4, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.day.toString().padLeft(2, '0')}";
+    try {
+      DateTime? picked = await showDatePicker(
+        context: context,
+        initialDate: DateTime.now(),
+        firstDate: DateTime(2020),
+        lastDate: DateTime(2100),
+      );
+      if (picked != null) {
+        controller.text = "${picked.year.toString().padLeft(4, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.day.toString().padLeft(2, '0')}";
+      }
+    } catch (e, stack) {
+      showUserFriendlyError(e);
+      logError('TimeInputSection._pickDate', e, stack);
     }
   }
 
   Future<void> _pickTime(BuildContext context, TextEditingController controller) async {
-    TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-    );
-    if (picked != null) {
-      final formatted = "${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}";
-      controller.text = formatted;
+    try {
+      TimeOfDay? picked = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+      if (picked != null) {
+        final formatted = "${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}";
+        controller.text = formatted;
+      }
+    } catch (e, stack) {
+      showUserFriendlyError(e);
+      logError('TimeInputSection._pickTime', e, stack);
     }
   }
 
@@ -80,11 +88,16 @@ class _TimeInputSectionState extends State<TimeInputSection> {
             const SizedBox(width: 10),
             ElevatedButton(
               onPressed: () {
-                final now = DateTime.now();
-                final date = "${now.year.toString().padLeft(4, '0')}/${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}";
-                final time = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-                widget.dateController.text = date;
-                widget.timeController.text = time;
+                try {
+                  final now = DateTime.now();
+                  final date = "${now.year.toString().padLeft(4, '0')}/${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}";
+                  final time = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+                  widget.dateController.text = date;
+                  widget.timeController.text = time;
+                } catch (e, stack) {
+                  showUserFriendlyError(e);
+                  logError('TimeInputSection.setNow', e, stack);
+                }
               },
               child: const Text('현재'),
             ),

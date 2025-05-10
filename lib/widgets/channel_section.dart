@@ -34,10 +34,12 @@ class ChannelSection extends StatelessWidget {
         TextField(
           controller: controllers['1'],
           decoration: const InputDecoration(labelText: '온도1'),
+          keyboardType: TextInputType.number,
         ),
         TextField(
           controller: controllers['2'],
           decoration: const InputDecoration(labelText: '온도2'),
+          keyboardType: TextInputType.number,
         ),
       ],
     );

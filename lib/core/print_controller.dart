@@ -6,14 +6,9 @@ import '../main.dart'; // navigatorKey
 import 'print_utils.dart';
 import 'record_generator.dart';
 import 'bluetooth_printer_service.dart';
-import 'record_store.dart'; // ✅ 전역 기록 리스트를 관리할 경우 추가됨
+import 'record_store.dart';
 import '../models/print_record.dart';
 import '../core/error_utils.dart';
-
-
-
-
-
 
 void exampleGenerateAndPrintText({
   required String vehicleNumber,
@@ -75,18 +70,15 @@ void exampleGenerateAndPrintText({
               try {
                 final printer = BluetoothPrinterService();
                 final imageBytes = await textToImageBytes(text);
-
                 await printer.printImage(imageBytes); // ✅ 인쇄 시도
 
                 // ✅ 인쇄 성공 후에만 기록 저장
-                await addPrintRecord(
-                    DateTime.now(),
-                    text,
-                );
+                await addPrintRecord(DateTime.now(), text);
 
                 Navigator.pop(navigatorKey.currentContext!); // 닫기
-              } catch (e) {
-                showUserFriendlyError(e); // 실패 시 메시지 표시
+              } catch (e, stack) {
+                showUserFriendlyError(e);
+                logError('PrintController.printAndSave', e, stack); // ✅ 로그 추가
               }
             },
             child: const Text('인쇄'),
@@ -94,7 +86,8 @@ void exampleGenerateAndPrintText({
         ],
       ),
     );
-  } catch (e) {
+  } catch (e, stack) {
     showUserFriendlyError(e);
+    logError('PrintController.exampleGenerateAndPrintText', e, stack); // ✅ 로그 추가
   }
 }
