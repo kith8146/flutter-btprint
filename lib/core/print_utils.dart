@@ -53,23 +53,31 @@ String generateSamplePrintText({
       continue;
     }
 
-    final timeStr = r['time'] ?? '';
-    final time = "${timeStr}${r['start'] == "S" ? "S" : ""}".padRight(7);
+  final timeStr = r['time'] ?? '';
+final time = "${timeStr}${r['start'] == "S" ? "S" : ""}".padRight(7);
 
-    final aRaw = r['a'] ?? '';
-    final bRaw = r['b'] ?? '';
+// 항상 라벨 출력
+String a = "A:";
+String b = "B:";
 
-    final aValue = double.tryParse(aRaw);
-    final bValue = double.tryParse(bRaw);
+if (channelAState != "없음") {
+  final aRaw = r['a'] ?? '';
+  final aValue = double.tryParse(aRaw);
+  a += aValue != null
+      ? " ${aValue >= 0 ? "+" : ""}${aValue.toStringAsFixed(1)}°C"
+      : " $aRaw°C";
+}
 
-    final a = aValue != null
-        ? "${aValue >= 0 ? "+" : ""}${aValue.toStringAsFixed(1)}"
-        : aRaw;
-    final b = bValue != null
-        ? "${bValue >= 0 ? "+" : ""}${bValue.toStringAsFixed(1)}"
-        : bRaw;
+if (channelBState != "없음") {
+  final bRaw = r['b'] ?? '';
+  final bValue = double.tryParse(bRaw);
+  b += bValue != null
+      ? " ${bValue >= 0 ? "+" : ""}${bValue.toStringAsFixed(1)}°C"
+      : " $bRaw°C";
+}
 
-    buffer.writeln(" $time A: $a°C B: $b°C");
+buffer.writeln(" $time $a $b");
+
 
     if (r['start'] == "S") {
       buffer.writeln();
