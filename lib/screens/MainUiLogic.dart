@@ -491,6 +491,8 @@ class _HomePageState extends State<HomePage> {
         maxA: double.tryParse(aControllers['2']!.text) ?? -18.0,
         minB: double.tryParse(bControllers['1']!.text) ?? 2.0,
         maxB: double.tryParse(bControllers['2']!.text) ?? 8.0,
+        channelAState: selectedAState,
+        channelBState: selectedBState,
       );
     },
 
