@@ -23,6 +23,8 @@ void exampleGenerateAndPrintText({
   required double maxA,
   required double minB,
   required double maxB,
+  required String channelAState,
+  required String channelBState,
 }) {
   try {
     final start = DateFormat("yyyy/MM/dd HH:mm").parse("$loadDate $loadTime");
@@ -46,8 +48,8 @@ void exampleGenerateAndPrintText({
       unloadTime: "$unloadDate $unloadTime",
       userStop: userChecked,
       oneDayOnly: oneDayChecked,
-      channelAState: '',
-      channelBState: '',
+      channelAState: channelAState,
+      channelBState: channelBState,
       records: records,
     );
 
