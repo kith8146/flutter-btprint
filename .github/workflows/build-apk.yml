@@ -23,8 +23,9 @@ jobs:
         run: |
           set -e
           CACHE="${PUB_CACHE:-$HOME/.pub-cache}"
-          DIR=$(find "$CACHE" -type d -path '*blue_thermal_printer-*/android' | head -n 1)
+          DIR=$(ls -d "$CACHE"/hosted/*/blue_thermal_printer-*/android 2>/dev/null | head -n 1 || true)
           if [ -z "$DIR" ]; then echo "blue_thermal_printer android dir not found"; exit 1; fi
+          echo "patch target: $DIR"
           PKG=$(grep -o 'package="[^"]*"' "$DIR/src/main/AndroidManifest.xml" | head -n 1 | cut -d'"' -f2)
           if [ -z "$PKG" ]; then echo "package attribute not found"; exit 1; fi
           if grep -q "namespace" "$DIR/build.gradle"; then
