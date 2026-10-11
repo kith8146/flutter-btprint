@@ -2,6 +2,7 @@ import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../core/error_utils.dart';
@@ -9,6 +10,13 @@ import '../core/error_utils.dart';
 class BluetoothPrinterService {
   final BlueThermalPrinter printer = BlueThermalPrinter.instance;
   static const _lastDeviceKey = 'last_connected_printer';
+
+  /// blue_thermal_printer 1.2.3 은 이미지 높이가 255px 를 넘으면
+  /// 프린터에 보내는 헤더(GS v 0)의 높이 값을 잘못 만든다.
+  /// 그러면 프린터가 "아직 이미지 데이터가 남아 있다"고 착각해서
+  /// 다음 인쇄가 오른쪽으로 밀려 나온다. 그래서 이미지를 이 높이 이하로 잘라서 보낸다.
+  static const int _maxStripHeight = 200;
+  static const Duration _stripDelay = Duration(milliseconds: 100);
 
   /// 프린터 연결 함수 (MAC 주소가 있으면 해당 기기로 시도)
   Future<BluetoothDevice?> connectToPrinter([String? macAddress]) async {
@@ -107,15 +115,75 @@ class BluetoothPrinterService {
     }
   }
 
-  /// 이미지 출력
+  /// 이미지 출력 (긴 이미지는 조각으로 나눠서 순서대로 전송)
   Future<void> printImage(Uint8List imageBytes) async {
     try {
-      await printer.printImageBytes(imageBytes);
+      if (imageBytes.isEmpty) return;
+
+      final strips = await _splitIntoStrips(imageBytes);
+      for (var i = 0; i < strips.length; i++) {
+        await printer.printImageBytes(strips[i]);
+        if (i < strips.length - 1) {
+          await Future.delayed(_stripDelay); // 프린터 버퍼가 따라올 시간
+        }
+      }
       await printer.printNewLine();
     } catch (e, stacktrace) {
       handleBluetoothError(e, stacktrace);
       logError('BluetoothPrinterService.printImage', e, stacktrace);
     }
+  }
+
+  /// PNG 이미지를 세로로 _maxStripHeight 픽셀씩 잘라 PNG 목록으로 반환
+  Future<List<Uint8List>> _splitIntoStrips(Uint8List pngBytes) async {
+    final codec = await ui.instantiateImageCodec(pngBytes);
+    final frame = await codec.getNextFrame();
+    final src = frame.image;
+    final width = src.width;
+    final height = src.height;
+
+    // 짧은 이미지는 그대로 전송
+    if (height <= _maxStripHeight) {
+      src.dispose();
+      codec.dispose();
+      return [pngBytes];
+    }
+
+    final strips = <Uint8List>[];
+    for (var top = 0; top < height; top += _maxStripHeight) {
+      final stripHeight =
+          (top + _maxStripHeight <= height) ? _maxStripHeight : height - top;
+
+      final recorder = ui.PictureRecorder();
+      final canvas = ui.Canvas(recorder);
+      final area =
+          ui.Rect.fromLTWH(0, 0, width.toDouble(), stripHeight.toDouble());
+
+      // 흰 배경 위에 원본의 해당 구간만 그대로 복사
+      canvas.drawRect(area, ui.Paint()..color = const ui.Color(0xFFFFFFFF));
+      canvas.drawImageRect(
+        src,
+        ui.Rect.fromLTWH(0, top.toDouble(), width.toDouble(), stripHeight.toDouble()),
+        area,
+        ui.Paint(),
+      );
+
+      final picture = recorder.endRecording();
+      final stripImage = await picture.toImage(width, stripHeight);
+      final byteData =
+          await stripImage.toByteData(format: ui.ImageByteFormat.png);
+      stripImage.dispose();
+      picture.dispose();
+
+      if (byteData == null) {
+        throw Exception('이미지 분할 실패 (top=$top)');
+      }
+      strips.add(byteData.buffer.asUint8List());
+    }
+
+    src.dispose();
+    codec.dispose();
+    return strips;
   }
 
   /// 연결 해제
