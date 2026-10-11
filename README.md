@@ -60,9 +60,28 @@ flutter run -d <기기 ID>      # flutter devices 로 ID 확인
 ```
 
 블루투스 프린터 연결은 에뮬레이터에서 테스트할 수 없으므로 실제 Android 기기가 필요합니다.
-`main` 브랜치에 push하면 GitHub Actions(`build-apk.yml`)가 디버그 APK를 만들고, Actions 탭의 Artifacts(`app-debug-apk`)에서 받을 수 있습니다.
+
+### APK 받기 (GitHub Actions)
+
+`main` 브랜치에 push하면 GitHub Actions(`build-apk.yml`)가 디버그 APK를 자동으로 빌드합니다.
+
+1. 저장소의 **Actions** 탭에서 최신 실행(초록 체크)을 엽니다.
+2. 페이지 맨 아래 **Artifacts**의 `app-debug-apk`를 내려받습니다. (zip)
+3. 압축을 풀면 나오는 `app-debug.apk`를 폰에 설치합니다. ("출처를 알 수 없는 앱" 허용 필요)
+
+디버그 서명 빌드이므로, 이전에 설치한 앱 위에 덮어 설치되지 않으면 삭제 후 재설치해야 할 수 있습니다. 이 경우 앱에 저장된 출력 기록과 차량번호가 함께 지워집니다.
 
 ## 변경 이력
+
+### 2026-10-11 - 최신 Flutter(3.44.7) 빌드 대응 및 CI 정비
+
+| 파일 | 변경 |
+|---|---|
+| `pubspec.yaml`, `pubspec.lock` | `intl`을 `0.19.0`에서 `0.20.2`로 고정. Flutter 3.44.7의 `flutter_localizations`가 `intl 0.20.2`를 요구해 의존성 충돌이 나던 문제 해결. 이에 맞춰 lock 파일 갱신 |
+| `.github/workflows/build-apk.yml` | `blue_thermal_printer 1.2.3`의 `android/build.gradle`에 `namespace`가 없어 빌드가 실패하던 문제를 해결하는 단계(`Patch blue_thermal_printer namespace`) 추가. 플러그인의 `AndroidManifest.xml`에 있는 `package` 값을 읽어 `namespace`로 넣음 |
+| `README.md` | 프로젝트 구조, 변경 이력, APK 받는 방법, 빌드 참고사항 정리 |
+
+관련 커밋: `b8d7650`, `e552ebd`, `44565d6`, `c71fefd`
 
 ### 2026-07-23 - A채널 '없음' 선택 시에도 온도가 출력되던 문제 수정
 
@@ -90,16 +109,16 @@ flutter run -d <기기 ID>      # flutter devices 로 ID 확인
 - **v1.1.0** (2025-05-08): 프린터 선택 연결, 에러 처리 개선, MAC 주소 숨김, 출력 기록 화면 리팩토링 및 날짜 필터
 - **v1.0.0**: 초기 버전 - 자동 연결, 텍스트·이미지 출력, 출력 기록 관리
 
-## 알려진 빌드 이슈
+## 빌드 참고사항
 
-최신 Flutter(3.44.7) / Android Gradle Plugin 환경에서 빌드할 때 아래 두 가지가 필요합니다.
+최신 Flutter(3.44.7) / Android Gradle Plugin(AGP 8) 환경에서 빌드할 때 알아둘 점입니다.
 
-**1. intl 버전 충돌**
+**1. intl 버전**
 
-`flutter_localizations`가 `intl 0.20.2`를 요구하므로 `pubspec.yaml`의 `intl: ^0.19.0`을 올려야 합니다.
+`pubspec.yaml`에 `intl: 0.20.2`로 고정되어 있습니다. `flutter_localizations`가 이 버전을 요구하므로, Flutter SDK를 올릴 때는 SDK가 요구하는 `intl` 버전과 맞는지 확인하세요. 맞지 않으면 `flutter pub get`에서 아래와 같은 충돌이 납니다.
 
-```bash
-flutter pub add intl:^0.20.2
+```
+Because btprint depends on flutter_localizations from sdk which depends on intl 0.20.2, intl 0.20.2 is required.
 ```
 
 **2. blue_thermal_printer namespace 누락**
@@ -110,7 +129,9 @@ flutter pub add intl:^0.20.2
 Namespace not specified. Specify a namespace in the module's build file: ...blue_thermal_printer-1.2.3\android\build.gradle
 ```
 
-해결 방법: pub 캐시에 있는 플러그인 폴더(Windows 기준 `%LOCALAPPDATA%\Pub\Cache\hosted\pub.dev\blue_thermal_printer-1.2.3\android\`)에서
+**GitHub Actions 빌드**에서는 워크플로우가 이 문제를 자동으로 패치하므로 따로 할 일이 없습니다.
+
+**내 PC에서 직접 빌드(`flutter run`)할 때**는 아래처럼 pub 캐시에 있는 플러그인 폴더(Windows 기준 `%LOCALAPPDATA%\Pub\Cache\hosted\pub.dev\blue_thermal_printer-1.2.3\android\`)를 한 번 직접 고쳐야 합니다.
 
 1. `src/main/AndroidManifest.xml`의 `package="..."` 값을 확인
 2. 같은 폴더 `build.gradle`의 `android {` 바로 아래에 `namespace '확인한 package 값'` 추가
