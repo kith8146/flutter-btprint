@@ -19,6 +19,21 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Patch blue_thermal_printer namespace
+        run: |
+          set -e
+          CACHE="${PUB_CACHE:-$HOME/.pub-cache}"
+          DIR=$(find "$CACHE" -type d -path '*blue_thermal_printer-*/android' | head -n 1)
+          if [ -z "$DIR" ]; then echo "blue_thermal_printer android dir not found"; exit 1; fi
+          PKG=$(grep -o 'package="[^"]*"' "$DIR/src/main/AndroidManifest.xml" | head -n 1 | cut -d'"' -f2)
+          if [ -z "$PKG" ]; then echo "package attribute not found"; exit 1; fi
+          if grep -q "namespace" "$DIR/build.gradle"; then
+            echo "namespace already set, skipping"
+          else
+            sed -i "0,/^\([[:space:]]*\)android[[:space:]]*{/s//&\n\1    namespace \"$PKG\"/" "$DIR/build.gradle"
+          fi
+          grep -n "namespace" "$DIR/build.gradle"
+
       - name: Build debug APK
         run: flutter build apk --debug
 
