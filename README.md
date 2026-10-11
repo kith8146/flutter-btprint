@@ -34,7 +34,7 @@
 lib/
 ├── main.dart
 ├── core/
-│   ├── bluetooth_printer_service.dart   # 프린터 검색/연결/해제, 마지막 기기 저장
+│   ├── bluetooth_printer_service.dart   # 프린터 검색/연결/해제, 마지막 기기 저장, 이미지 분할 전송
 │   ├── database_helper.dart             # SQLite 초기화 및 CRUD
 │   ├── error_utils.dart                 # 에러 처리, 사용자 안내 메시지
 │   ├── print_controller.dart            # 입력값 → 기록 생성 → 출력 흐름 제어
@@ -72,6 +72,22 @@ flutter run -d <기기 ID>      # flutter devices 로 ID 확인
 디버그 서명 빌드이므로, 이전에 설치한 앱 위에 덮어 설치되지 않으면 삭제 후 재설치해야 할 수 있습니다. 이 경우 앱에 저장된 출력 기록과 차량번호가 함께 지워집니다.
 
 ## 변경 이력
+
+### 2026-10-11 - 두 번째 인쇄부터 오른쪽으로 밀려 나오던 문제 수정
+
+**증상**: 한 번 인쇄한 뒤 다시 인쇄하면 출력 전체가 탭을 누른 것처럼 오른쪽으로 밀려 나옴. 첫 인쇄는 정상.
+
+**원인**: `blue_thermal_printer 1.2.3`은 이미지를 프린터로 보낼 때 래스터 명령(GS v 0)의 헤더를 직접 만드는데(`Utils.decodeBitmap`), 이미지 높이가 255px를 넘으면 높이 값을 잘못 계산함. 기록지는 대부분 255px보다 길어서, 프린터가 실제보다 큰 높이를 전달받고 "이미지 데이터가 더 온다"고 기다리는 상태로 남음. 다음 인쇄 데이터가 이 대기 상태의 이미지 데이터로 소비되면서 밀려 나옴.
+
+**수정 내용**
+
+| 파일 | 변경 |
+|---|---|
+| `lib/core/bluetooth_printer_service.dart` | `printImage`가 이미지를 200px 높이 조각으로 잘라 순서대로 전송(조각 사이 100ms 대기). 조각마다 헤더가 정상 계산됨. 인쇄 기록의 재인쇄도 같은 함수를 사용하므로 함께 적용 |
+
+수정 후 실제 프린터에서 연속 인쇄가 밀리지 않고 정상 출력되는 것을 확인함.
+
+관련 커밋: `e10775a`
 
 ### 2026-10-11 - 최신 Flutter(3.44.7) 빌드 대응 및 CI 정비
 
@@ -137,6 +153,14 @@ Namespace not specified. Specify a namespace in the module's build file: ...blue
 2. 같은 폴더 `build.gradle`의 `android {` 바로 아래에 `namespace '확인한 package 값'` 추가
 
 이 수정은 캐시 파일을 직접 고치는 방식이라 `flutter pub cache` 정리나 다른 PC에서는 다시 해야 합니다.
+
+**3. 이미지 인쇄는 255px 이하 조각으로 보내야 함**
+
+`blue_thermal_printer 1.2.3`은 높이 255px를 넘는 이미지의 프린터 헤더를 잘못 만들어, 이후 인쇄가 밀려 나오게 합니다. 그래서 `BluetoothPrinterService.printImage`가 이미지를 200px씩 잘라서 보냅니다(`_maxStripHeight`).
+
+- 인쇄 코드를 수정할 때 `printer.printImageBytes`를 직접 호출하지 말고 `printImage`를 거치세요.
+- 조각 사이 대기 시간(`_stripDelay`, 100ms)이 짧아 글자가 깨지면 값을 늘리세요.
+- 플러그인을 다른 버전으로 바꿀 때는 이 제한이 풀렸는지 확인하세요.
 
 ## 향후 추가 예정
 
